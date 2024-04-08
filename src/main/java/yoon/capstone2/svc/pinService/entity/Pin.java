@@ -23,6 +23,8 @@ public class Pin {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long pinIdx;
 
+    private long mapIdx;
+
     @ManyToOne
     @JoinColumn(name = "pin_member")
     private Members members;

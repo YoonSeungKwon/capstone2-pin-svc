@@ -12,8 +12,12 @@ import yoon.capstone2.svc.pinService.entity.Members;
 import yoon.capstone2.svc.pinService.entity.Pin;
 import yoon.capstone2.svc.pinService.enums.Category;
 import yoon.capstone2.svc.pinService.enums.ErrorCode;
+import yoon.capstone2.svc.pinService.exception.PinException;
 import yoon.capstone2.svc.pinService.exception.UnauthorizedException;
 import yoon.capstone2.svc.pinService.repository.PinRepository;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -33,10 +37,39 @@ public class PinService {
     }
 
     //핀 불러오기
+    public PinResponse getPin(long pinIdx){
+        //해당 지도의 멤버인지 확인하는 절차 필요
+
+        Pin pin = pinRepository.findPinByPinIdx(pinIdx);
+        if(pin == null)
+            throw new PinException(ErrorCode.PIN_NOT_FOUND.getMessage(), ErrorCode.PIN_NOT_FOUND.getStatus());
+
+        return toResponse(pin);
+    }
+
 
     //전체 핀 불러오기
+    public List<PinResponse> getPinList(){
+        //해당 지도의 멤버인지 확인하는 절차 필요
+
+        List<Pin> list = pinRepository.findAll();
+        List<PinResponse> result = new ArrayList<>();
+
+        for(Pin p : list){
+            result.add(toResponse(p));
+        }
+
+        return result;
+    }
 
     //핀 자세히 보기
+    public PinDetailResponse getDetail(long pinIdx){
+        //해당 지도의 멤버인지 확인하는 절차 필요
+
+        Pin pin = pinRepository.findPinByPinIdx(pinIdx);
+
+        return toDetail(pin);
+    }
 
     //핀 만들기
     public PinResponse createPin(PinRequest dto){
@@ -72,9 +105,10 @@ public class PinService {
         Members currentMember = (Members) authentication.getPrincipal();
         Pin pin = pinRepository.findPinByPinIdx(pinIdx);
         if(pin == null)
-            throw new RuntimeException(); // 핀이 존재하지 않음
+            throw new PinException(ErrorCode.PIN_NOT_FOUND.getMessage(), ErrorCode.PIN_NOT_FOUND.getStatus()); // 핀이 존재하지 않음
         if(currentMember != pin.getMembers())
-            throw new RuntimeException(); //멤버가 일치하지 않음
+            throw new PinException(ErrorCode.FORBIDDEN_ACCESS.getMessage(), ErrorCode.FORBIDDEN_ACCESS.getStatus()); //멤버가 일치하지 않음
+
 
         if(dto.getTitle() != null && !dto.getTitle().equals(pin.getTitle()))
             pin.setTitle(dto.getTitle());
@@ -103,9 +137,9 @@ public class PinService {
         Pin pin = pinRepository.findPinByPinIdx(pinIdx);
 
         if(pin == null)
-            throw new RuntimeException(); // 핀이 존재하지 않음
+            throw new PinException(ErrorCode.PIN_NOT_FOUND.getMessage(), ErrorCode.PIN_NOT_FOUND.getStatus());  // 핀이 존재하지 않음
         if(currentMember != pin.getMembers())
-            throw new RuntimeException(); //멤버가 일치하지 않음
+            throw new PinException(ErrorCode.FORBIDDEN_ACCESS.getMessage(), ErrorCode.FORBIDDEN_ACCESS.getStatus()); //멤버가 일치하지 않음
 
         pinRepository.delete(pin);
     }
