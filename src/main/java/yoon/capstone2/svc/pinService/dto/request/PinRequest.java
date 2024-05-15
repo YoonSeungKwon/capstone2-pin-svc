@@ -5,6 +5,8 @@ import lombok.Getter;
 @Getter
 public class PinRequest {
 
+    private long mapIndex;
+
     private String title;
 
     private String content;

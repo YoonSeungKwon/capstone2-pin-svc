@@ -8,12 +8,17 @@ import org.springframework.stereotype.Service;
 import yoon.capstone2.svc.pinService.dto.request.PinRequest;
 import yoon.capstone2.svc.pinService.dto.response.PinDetailResponse;
 import yoon.capstone2.svc.pinService.dto.response.PinResponse;
+import yoon.capstone2.svc.pinService.entity.MapMembers;
+import yoon.capstone2.svc.pinService.entity.Maps;
 import yoon.capstone2.svc.pinService.entity.Members;
 import yoon.capstone2.svc.pinService.entity.Pin;
 import yoon.capstone2.svc.pinService.enums.Category;
-import yoon.capstone2.svc.pinService.enums.ErrorCode;
+import yoon.capstone2.svc.pinService.enums.ExceptionCode;
+import yoon.capstone2.svc.pinService.exception.MapException;
 import yoon.capstone2.svc.pinService.exception.PinException;
-import yoon.capstone2.svc.pinService.exception.UnauthorizedException;
+import yoon.capstone2.svc.pinService.exception.UnAuthorizedException;
+import yoon.capstone2.svc.pinService.repository.MapMemberRepository;
+import yoon.capstone2.svc.pinService.repository.MapRepository;
 import yoon.capstone2.svc.pinService.repository.PinRepository;
 
 import java.util.ArrayList;
@@ -23,7 +28,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PinService {
 
+    private final MapRepository mapRepository;
+
     private final PinRepository pinRepository;
+
+    private final MapMemberRepository mapMemberRepository;
 
     //toResponse
     private PinResponse toResponse(Pin pin){
@@ -38,21 +47,56 @@ public class PinService {
 
     //핀 불러오기
     public PinResponse getPin(long pinIdx){
-        //해당 지도의 멤버인지 확인하는 절차 필요
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || authentication instanceof AnonymousAuthenticationToken) {
+            throw new UnAuthorizedException(ExceptionCode.UNAUTHORIZED_ACCESS.getMessage(), ExceptionCode.UNAUTHORIZED_ACCESS.getStatus()); //로그인 되지 않았거나 만료됨
+        }
 
         Pin pin = pinRepository.findPinByPinIdx(pinIdx);
-        if(pin == null)
-            throw new PinException(ErrorCode.PIN_NOT_FOUND.getMessage(), ErrorCode.PIN_NOT_FOUND.getStatus());
+
+        if(pin == null)         //핀이 존재하지 않음
+            throw new PinException(ExceptionCode.PIN_NOT_FOUND.getMessage(), ExceptionCode.PIN_NOT_FOUND.getStatus());
+
+        Members currentMember = (Members) authentication.getPrincipal();
+        Maps currentMap = pin.getMaps();
+
+        if(currentMap == null){
+            throw new MapException(ExceptionCode.MAP_NOT_FOUND.getMessage(), ExceptionCode.MAP_NOT_FOUND.getStatus());
+        }
+
+        if(!mapMemberRepository.existsByMapsAndMembers(currentMap, currentMember))      //핀에 권한이 없음
+            throw new PinException(ExceptionCode.UNAUTHORIZED_ACCESS.getMessage(), ExceptionCode.UNAUTHORIZED_ACCESS.getStatus());
+
+
 
         return toResponse(pin);
     }
 
 
     //전체 핀 불러오기
-    public List<PinResponse> getPinList(){
+    public List<PinResponse> getPinList(long mapIndex){
         //해당 지도의 멤버인지 확인하는 절차 필요
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        List<Pin> list = pinRepository.findAll();
+        if (authentication == null || authentication instanceof AnonymousAuthenticationToken) {
+            throw new UnAuthorizedException(ExceptionCode.UNAUTHORIZED_ACCESS.getMessage(), ExceptionCode.UNAUTHORIZED_ACCESS.getStatus()); //로그인 되지 않았거나 만료됨
+        }
+
+        Members currentMember = (Members) authentication.getPrincipal();
+        Maps currentMap = mapRepository.findMapsByMapIdx(mapIndex);
+
+        if(currentMap == null){
+            throw new MapException(ExceptionCode.MAP_NOT_FOUND.getMessage(), ExceptionCode.MAP_NOT_FOUND.getStatus());
+        }
+
+        MapMembers mapMembers = mapMemberRepository.findMapMembersByMapsAndMembers(currentMap, currentMember);
+
+        if(!mapMemberRepository.existsByMapsAndMembers(currentMap, currentMember))      //핀에 권한이 없음
+            throw new PinException(ExceptionCode.UNAUTHORIZED_ACCESS.getMessage(), ExceptionCode.UNAUTHORIZED_ACCESS.getStatus());
+
+
+        List<Pin> list = pinRepository.findPinsByMaps(currentMap);
         List<PinResponse> result = new ArrayList<>();
 
         for(Pin p : list){
@@ -65,8 +109,21 @@ public class PinService {
     //핀 자세히 보기
     public PinDetailResponse getDetail(long pinIdx){
         //해당 지도의 멤버인지 확인하는 절차 필요
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || authentication instanceof AnonymousAuthenticationToken) {
+            throw new UnAuthorizedException(ExceptionCode.UNAUTHORIZED_ACCESS.getMessage(), ExceptionCode.UNAUTHORIZED_ACCESS.getStatus()); //로그인 되지 않았거나 만료됨
+        }
+
+        Members currentMember = (Members) authentication.getPrincipal();
 
         Pin pin = pinRepository.findPinByPinIdx(pinIdx);
+        if(pin == null)     //핀이 존재하지 않음
+            throw new PinException(ExceptionCode.PIN_NOT_FOUND.getMessage(), ExceptionCode.PIN_NOT_FOUND.getStatus());
+
+        Maps currentMap = pin.getMaps();
+        if(!mapMemberRepository.existsByMapsAndMembers(currentMap, currentMember))      //핀에 권한이 없음
+            throw new PinException(ExceptionCode.UNAUTHORIZED_ACCESS.getMessage(), ExceptionCode.UNAUTHORIZED_ACCESS.getStatus());
 
         return toDetail(pin);
     }
@@ -76,11 +133,22 @@ public class PinService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || authentication instanceof AnonymousAuthenticationToken)
-            throw new UnauthorizedException(ErrorCode.UNAUTHORIZED_ACCESS.getMessage(), ErrorCode.UNAUTHORIZED_ACCESS.getStatus()); //로그인 되지 않았거나 만료됨
+            throw new UnAuthorizedException(ExceptionCode.UNAUTHORIZED_ACCESS.getMessage(), ExceptionCode.UNAUTHORIZED_ACCESS.getStatus()); //로그인 되지 않았거나 만료됨
 
         Members currentMember = (Members) authentication.getPrincipal();
 
+        Maps currentMap = mapRepository.findMapsByMapIdx(dto.getMapIndex());
+
+        if(currentMap == null)
+            throw new MapException(ExceptionCode.MAP_NOT_FOUND.getMessage(), ExceptionCode.MAP_NOT_FOUND.getStatus());
+
+        if(!mapMemberRepository.existsByMapsAndMembers(currentMap, currentMember))      //핀에 권한이 없음
+            throw new PinException(ExceptionCode.UNAUTHORIZED_ACCESS.getMessage(), ExceptionCode.UNAUTHORIZED_ACCESS.getStatus());
+
+
+
         Pin pin = Pin.builder()
+                .maps(currentMap)
                 .category(Category.valueOf(dto.getCategory()))
                 .title(dto.getTitle())
                 .content(dto.getContent())
@@ -100,14 +168,23 @@ public class PinService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || authentication instanceof AnonymousAuthenticationToken)
-            throw new UnauthorizedException(ErrorCode.UNAUTHORIZED_ACCESS.getMessage(), ErrorCode.UNAUTHORIZED_ACCESS.getStatus()); //로그인 되지 않았거나 만료됨
+            throw new UnAuthorizedException(ExceptionCode.UNAUTHORIZED_ACCESS.getMessage(), ExceptionCode.UNAUTHORIZED_ACCESS.getStatus()); //로그인 되지 않았거나 만료됨
 
         Members currentMember = (Members) authentication.getPrincipal();
+
         Pin pin = pinRepository.findPinByPinIdx(pinIdx);
         if(pin == null)
-            throw new PinException(ErrorCode.PIN_NOT_FOUND.getMessage(), ErrorCode.PIN_NOT_FOUND.getStatus()); // 핀이 존재하지 않음
+            throw new PinException(ExceptionCode.PIN_NOT_FOUND.getMessage(), ExceptionCode.PIN_NOT_FOUND.getStatus()); // 핀이 존재하지 않음
         if(currentMember != pin.getMembers())
-            throw new PinException(ErrorCode.FORBIDDEN_ACCESS.getMessage(), ErrorCode.FORBIDDEN_ACCESS.getStatus()); //멤버가 일치하지 않음
+            throw new PinException(ExceptionCode.FORBIDDEN_ACCESS.getMessage(), ExceptionCode.FORBIDDEN_ACCESS.getStatus()); //멤버가 일치하지 않음
+
+        Maps currentMap = mapRepository.findMapsByMapIdx(dto.getMapIndex());
+
+        if(currentMap == null)
+            throw new MapException(ExceptionCode.MAP_NOT_FOUND.getMessage(), ExceptionCode.MAP_NOT_FOUND.getStatus());
+
+        if(!mapMemberRepository.existsByMapsAndMembers(currentMap, currentMember))      //핀에 권한이 없음
+            throw new PinException(ExceptionCode.UNAUTHORIZED_ACCESS.getMessage(), ExceptionCode.UNAUTHORIZED_ACCESS.getStatus());
 
 
         if(dto.getTitle() != null && !dto.getTitle().equals(pin.getTitle()))
@@ -131,15 +208,15 @@ public class PinService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || authentication instanceof AnonymousAuthenticationToken)
-            throw new UnauthorizedException(ErrorCode.UNAUTHORIZED_ACCESS.getMessage(), ErrorCode.UNAUTHORIZED_ACCESS.getStatus()); //로그인 되지 않았거나 만료됨
+            throw new UnAuthorizedException(ExceptionCode.UNAUTHORIZED_ACCESS.getMessage(), ExceptionCode.UNAUTHORIZED_ACCESS.getStatus()); //로그인 되지 않았거나 만료됨
 
         Members currentMember = (Members) authentication.getPrincipal();
         Pin pin = pinRepository.findPinByPinIdx(pinIdx);
 
         if(pin == null)
-            throw new PinException(ErrorCode.PIN_NOT_FOUND.getMessage(), ErrorCode.PIN_NOT_FOUND.getStatus());  // 핀이 존재하지 않음
+            throw new PinException(ExceptionCode.PIN_NOT_FOUND.getMessage(), ExceptionCode.PIN_NOT_FOUND.getStatus());  // 핀이 존재하지 않음
         if(currentMember != pin.getMembers())
-            throw new PinException(ErrorCode.FORBIDDEN_ACCESS.getMessage(), ErrorCode.FORBIDDEN_ACCESS.getStatus()); //멤버가 일치하지 않음
+            throw new PinException(ExceptionCode.FORBIDDEN_ACCESS.getMessage(), ExceptionCode.FORBIDDEN_ACCESS.getStatus()); //멤버가 일치하지 않음
 
         pinRepository.delete(pin);
     }

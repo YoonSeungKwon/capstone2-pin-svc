@@ -23,7 +23,9 @@ public class Pin {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long pinIdx;
 
-    private long mapIdx;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pin_map")
+    private Maps maps;
 
     @ManyToOne
     @JoinColumn(name = "pin_member")
@@ -56,7 +58,8 @@ public class Pin {
 
 
     @Builder
-    public Pin(Members members, String title, String content, Category category, int cost, int lat, int lon, String file, String memo){
+    public Pin(Maps maps, Members members, String title, String content, Category category, int cost, int lat, int lon, String file, String memo){
+        this.maps = maps;
         this.members = members;
         this.title = title;
         this.content = content;
