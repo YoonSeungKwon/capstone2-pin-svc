@@ -5,6 +5,7 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import yoon.capstone2.svc.pinService.dto.request.PinRequest;
 import yoon.capstone2.svc.pinService.dto.response.PinDetailResponse;
 import yoon.capstone2.svc.pinService.dto.response.PinResponse;
@@ -42,23 +43,26 @@ public class PinService {
     //toDetail
     private PinDetailResponse toDetail(Pin pin){
         return new PinDetailResponse(pin.getPinIdx(), pin.getMembers().getUsername(), pin.getTitle(), pin.getContent(),
-                pin.getCategory().getCategory(), pin.getCost(), pin.getCreatedAt(), pin.getUpdatedAt(), pin.getFile(), pin.getMemo());
+                pin.getCategory().getCategory(), pin.getCost(), pin.getCreatedAt(), pin.getUpdatedAt(), pin.getFile());
     }
 
     //핀 불러오기
+    @Transactional(readOnly = true)
     public PinResponse getPin(long pinIdx){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || authentication instanceof AnonymousAuthenticationToken) {
             throw new UnAuthorizedException(ExceptionCode.UNAUTHORIZED_ACCESS.getMessage(), ExceptionCode.UNAUTHORIZED_ACCESS.getStatus()); //로그인 되지 않았거나 만료됨
         }
+        Members currentMember = (Members) authentication.getPrincipal();
 
         Pin pin = pinRepository.findPinByPinIdx(pinIdx);
 
         if(pin == null)         //핀이 존재하지 않음
+        {
             throw new PinException(ExceptionCode.PIN_NOT_FOUND.getMessage(), ExceptionCode.PIN_NOT_FOUND.getStatus());
+        }
 
-        Members currentMember = (Members) authentication.getPrincipal();
         Maps currentMap = pin.getMaps();
 
         if(currentMap == null){
@@ -75,6 +79,7 @@ public class PinService {
 
 
     //전체 핀 불러오기
+    @Transactional(readOnly = true)
     public List<PinResponse> getPinList(long mapIndex){
         //해당 지도의 멤버인지 확인하는 절차 필요
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -107,6 +112,7 @@ public class PinService {
     }
 
     //핀 자세히 보기
+    @Transactional(readOnly = true)
     public PinDetailResponse getDetail(long pinIdx){
         //해당 지도의 멤버인지 확인하는 절차 필요
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -129,6 +135,7 @@ public class PinService {
     }
 
     //핀 만들기
+    @Transactional
     public PinResponse createPin(PinRequest dto){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -154,7 +161,6 @@ public class PinService {
                 .content(dto.getContent())
                 .cost(dto.getCost())
                 .file(dto.getFile())
-                .memo(dto.getMemo())
                 .lat(dto.getLat())
                 .lon(dto.getLon())
                 .members(currentMember)
@@ -164,6 +170,7 @@ public class PinService {
     }
 
     //핀 수정하기
+    @Transactional
     public PinResponse updatePin(long pinIdx, PinRequest dto){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -197,13 +204,12 @@ public class PinService {
             pin.setCost(dto.getCost());
         if(dto.getFile() != null && !dto.getFile().equals(pin.getFile()))
             pin.setFile(dto.getFile());
-        if(dto.getMemo() != null && !dto.getMemo().equals(pin.getMemo()))
-            pin.setMemo(dto.getMemo());
 
         return toResponse(pinRepository.save(pin));
     }
 
     //핀 삭제하기
+    @Transactional
     public void deletePin(long pinIdx){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 

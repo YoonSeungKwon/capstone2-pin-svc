@@ -54,11 +54,10 @@ public class Pin {
 
     private String file;
 
-    private String memo;
 
 
     @Builder
-    public Pin(Maps maps, Members members, String title, String content, Category category, int cost, int lat, int lon, String file, String memo){
+    public Pin(Maps maps, Members members, String title, String content, Category category, int cost, int lat, int lon, String file){
         this.maps = maps;
         this.members = members;
         this.title = title;
@@ -68,7 +67,6 @@ public class Pin {
         this.latitude = lat;
         this.longitude = lon;
         this.file = file;
-        this.memo = memo;
     }
 
 }

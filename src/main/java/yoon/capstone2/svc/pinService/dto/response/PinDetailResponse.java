@@ -27,6 +27,4 @@ public class PinDetailResponse {
 
     private String file;
 
-    private String memo;
-
 }

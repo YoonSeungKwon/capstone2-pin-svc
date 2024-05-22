@@ -44,7 +44,7 @@ public class SecurityConfig {
                     auth.anyRequest().permitAll();
                 })
 
-                .csrf(Customizer.withDefaults())
+                .cors(Customizer.withDefaults())
 
                 .sessionManagement(session -> {session.sessionCreationPolicy(SessionCreationPolicy.STATELESS);})
 

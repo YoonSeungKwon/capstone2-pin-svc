@@ -21,7 +21,4 @@ public class PinRequest {
 
     private String file;
 
-    private String memo;
-
-
 }
