@@ -13,11 +13,15 @@ public class PinDetailResponse {
 
     private String writer;
 
+    private String header;
+
     private String title;
 
-    private String content;
+    private String memo;
 
     private String category;
+
+    private String method;
 
     private int cost;
 

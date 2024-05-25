@@ -5,20 +5,20 @@ import lombok.Getter;
 @Getter
 public class PinRequest {
 
-    private long mapIndex;
+    private String header;
 
     private String title;
 
-    private String content;
+    private String method;
 
     private String category;
+
+    private String memo;
 
     private int cost;
 
     private int lat;
 
     private int lon;
-
-    private String file;
 
 }

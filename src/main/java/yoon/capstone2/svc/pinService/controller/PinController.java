@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import yoon.capstone2.svc.pinService.dto.request.PinRequest;
 import yoon.capstone2.svc.pinService.dto.response.PinDetailResponse;
 import yoon.capstone2.svc.pinService.dto.response.PinResponse;
@@ -55,20 +56,20 @@ public class PinController {
 
     //핀 만들기      POST()
     @Operation(summary = "지도에 핀 만들기")
-    @PostMapping()
-    public ResponseEntity<PinResponse> createPin(@RequestBody PinRequest dto){
+    @PostMapping("/{mapIdx}")
+    public ResponseEntity<PinResponse> createPin(@PathVariable long mapIdx, @RequestPart MultipartFile file, @RequestPart PinRequest dto){
 
-        PinResponse result = pinService.createPin(dto);
+        PinResponse result = pinService.createPin(mapIdx, file, dto);
 
         return new ResponseEntity<>(result, HttpStatus.CREATED);
     }
 
     //핀 수정하기    PUT(/{idx})
     @Operation(summary = "지도에 있는 특정 핀 수정하기")
-    @PutMapping("/{pinIdx}")
-    public ResponseEntity<PinResponse> updatePin(@PathVariable long pinIdx, @RequestBody PinRequest dto){
+    @PutMapping("/{mapIdx}/{pinIdx}")
+    public ResponseEntity<PinResponse> updatePin(@PathVariable long mapIdx, @PathVariable long pinIdx, @RequestPart MultipartFile file, @RequestPart PinRequest dto){
 
-        PinResponse result = pinService.updatePin(pinIdx, dto);
+        PinResponse result = pinService.updatePin(mapIdx, pinIdx, file, dto);
 
         return new ResponseEntity<>(result, HttpStatus.OK);
     }

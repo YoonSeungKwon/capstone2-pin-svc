@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import yoon.capstone2.svc.pinService.enums.Category;
+import yoon.capstone2.svc.pinService.enums.Method;
 
 import java.time.LocalDateTime;
 
@@ -31,15 +32,22 @@ public class Pin {
     @JoinColumn(name = "pin_member")
     private Members members;
 
+    @Column(nullable = false, length = 250)
+    private String header;
+
     @Column(nullable = false, length = 30)
     private String title;
 
-    @Column(nullable = false, length = 20)
-    private String content;
+    @Column(nullable = true, length = 1000)
+    private String memo;
 
     @Enumerated(EnumType.STRING)
     private Category category;
 
+    @Enumerated(EnumType.STRING)
+    private Method method;
+
+    @Column(nullable = false)
     private int cost;
 
     @CreationTimestamp
@@ -57,12 +65,14 @@ public class Pin {
 
 
     @Builder
-    public Pin(Maps maps, Members members, String title, String content, Category category, int cost, int lat, int lon, String file){
+    public Pin(Maps maps, Members members, String header, String title, String memo, Category category, Method method, int cost, int lat, int lon, String file){
         this.maps = maps;
         this.members = members;
+        this.header = header;
         this.title = title;
-        this.content = content;
+        this.memo = memo;
         this.category = category;
+        this.method = method;
         this.cost = cost;
         this.latitude = lat;
         this.longitude = lon;

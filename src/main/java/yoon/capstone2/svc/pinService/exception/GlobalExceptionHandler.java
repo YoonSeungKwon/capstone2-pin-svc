@@ -32,4 +32,8 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(e.getMessage(), e.getStatus());
     }
 
+    @ExceptionHandler({UtilException.class})
+    public ResponseEntity<String> utilException(UtilException e){
+        return new ResponseEntity<>(e.getMessage(), e.getStatus());
+    }
 }

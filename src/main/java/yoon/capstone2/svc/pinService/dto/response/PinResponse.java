@@ -9,7 +9,11 @@ public class PinResponse {
 
     private long pinIdx;
 
+    private String header;
+
     private String title;
+
+    private String memo;
 
     private String category;
 
@@ -19,4 +23,5 @@ public class PinResponse {
 
     private int lon;
 
+    private String file;
 }

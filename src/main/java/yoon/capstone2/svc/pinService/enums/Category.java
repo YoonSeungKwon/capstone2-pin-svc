@@ -5,21 +5,17 @@ import lombok.Getter;
 @Getter
 public enum Category {
 
-    GROCERIES("식료품"),
+    MEAL("식사"),
 
-    HOUSEHOLD_ITEMS("생활용품"),
+    CAFE("카페"),
 
-    CLOTHING("의류 및 액세서리"),
+    BEVERAGE("주류"),
 
-    HOUSING("주거 및 생활비"),
+    PICTURE("사진"),
 
-    TRANSPORTATION("교통"),
+    SHOPPING("쇼핑"),
 
-    LEISURE_AND_CULTURE("여가 및 문화"),
-
-    HEALTHCARE("의료 및 건강"),
-
-    FINANCIAL_AND_TAXES("금융 및 세금"),
+    PRESENT("선물"),
 
     OTHERS("기타");
 
@@ -27,6 +23,15 @@ public enum Category {
 
     Category(String category){
         this.category = category;
+    }
+
+    public static Category fromString(String category) {
+        for (Category c : Category.values()) {
+            if (c.category.equalsIgnoreCase(category)) {
+                return c;
+            }
+        }
+        return OTHERS;
     }
 
 }
