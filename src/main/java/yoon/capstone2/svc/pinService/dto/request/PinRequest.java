@@ -2,8 +2,12 @@ package yoon.capstone2.svc.pinService.dto.request;
 
 import lombok.Getter;
 
+import java.util.List;
+
 @Getter
 public class PinRequest {
+
+    private String place;
 
     private String header;
 
@@ -20,5 +24,7 @@ public class PinRequest {
     private double lat;
 
     private double lon;
+
+    private List<Integer> list;
 
 }

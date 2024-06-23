@@ -4,12 +4,15 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @AllArgsConstructor
 public class PinDetailResponse {
 
     private long pinIdx;
+
+    private String place;
 
     private String writer;
 
@@ -30,5 +33,7 @@ public class PinDetailResponse {
     private LocalDateTime updatedAt;
 
     private String file;
+
+    private List<?> list;
 
 }

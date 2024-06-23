@@ -7,11 +7,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import yoon.capstone2.svc.pinService.dto.request.PinRequest;
+import yoon.capstone2.svc.pinService.dto.response.MemberResponse;
 import yoon.capstone2.svc.pinService.dto.response.PinDetailResponse;
 import yoon.capstone2.svc.pinService.dto.response.PinResponse;
 import yoon.capstone2.svc.pinService.entity.*;
@@ -24,6 +24,7 @@ import yoon.capstone2.svc.pinService.exception.UnAuthorizedException;
 import yoon.capstone2.svc.pinService.exception.UtilException;
 import yoon.capstone2.svc.pinService.repository.MapMemberRepository;
 import yoon.capstone2.svc.pinService.repository.MapRepository;
+import yoon.capstone2.svc.pinService.repository.MemberRepository;
 import yoon.capstone2.svc.pinService.repository.PinRepository;
 
 import java.util.ArrayList;
@@ -34,6 +35,8 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class PinService {
+
+    private final MemberRepository memberRepository;
 
     private final MapRepository mapRepository;
 
@@ -48,14 +51,25 @@ public class PinService {
 
     //toResponse
     private PinResponse toResponse(Pin pin){
-        return new PinResponse(pin.getPinIdx(), pin.getHeader(), pin.getTitle(), pin.getMemo(), pin.getCategory().getCategory()
+        return new PinResponse(pin.getPinIdx(), pin.getPlace(), pin.getHeader(), pin.getTitle(), pin.getMemo(), pin.getCategory().getCategory()
                 , pin.getCost(), pin.getLatitude(), pin.getLongitude(), pin.getFile());
     }
 
     //toDetail
     private PinDetailResponse toDetail(Pin pin){
-        return new PinDetailResponse(pin.getPinIdx(), pin.getMembers().getUsername(), pin.getHeader(), pin.getTitle(), pin.getMemo(),
-                pin.getCategory().getCategory(), pin.getMethod().getValue(), pin.getCost(), pin.getCreatedAt(), pin.getUpdatedAt(), pin.getFile());
+
+        List<MemberResponse> list = new ArrayList<>();
+        for(PinMembers pinMembers: pin.getPinMembers()){
+            list.add(toMemberResponse(pinMembers.getMembers()));
+        }
+
+        return new PinDetailResponse(pin.getPinIdx(), pin.getMembers().getUsername(), pin.getPlace(), pin.getHeader(), pin.getTitle(), pin.getMemo(),
+                pin.getCategory().getCategory(), pin.getMethod().getValue(), pin.getCost(), pin.getCreatedAt(), pin.getUpdatedAt(), pin.getFile(), list);
+    }
+
+    private MemberResponse toMemberResponse(Members members){
+        return new MemberResponse(members.getMemberIdx(), members.getEmail(), members.getUsername()
+                , members.getProfile(), members.getCreatedAt(), members.getUpdatedAt());
     }
 
     //핀 불러오기
@@ -179,6 +193,7 @@ public class PinService {
             Pin pin = Pin.builder()
                     .maps(currentMap)
                     .members(currentMember)
+                    .place(dto.getPlace())
                     .header(dto.getHeader())
                     .title(dto.getTitle())
                     .category(Category.fromString(dto.getCategory()))
@@ -193,7 +208,17 @@ public class PinService {
             currentMap.getPins().add(pin);
 
             mapRepository.save(currentMap);
-            return toResponse(pin);
+
+            List<PinMembers> pinMembers = pin.getPinMembers();
+
+            for(int i:dto.getList()){
+                Members members = memberRepository.findMembersByMemberIdx(i);
+                if(members==null && !mapMemberRepository.existsByMapsAndMembers(currentMap, members)) continue;
+                PinMembers tempPinMember = PinMembers.builder().pin(pin).members(members).build();
+                pinMembers.add(tempPinMember);
+            }
+
+            return toResponse(pinRepository.save(pin));
 
         } catch (Exception e) {
             throw new UtilException(ExceptionCode.INTERNAL_SERVER_ERROR.getMessage(), ExceptionCode.INTERNAL_SERVER_ERROR.getStatus());
@@ -302,8 +327,10 @@ public class PinService {
         Maps maps = pin.getMaps();
 
         if(maps!=null){
-            List<Comments> list = new ArrayList<>(pin.getComments());
-            pin.getComments().removeAll(list);
+            List<Comments> list1 = new ArrayList<>(pin.getComments());
+            List<PinMembers> list2 = new ArrayList<>(pin.getPinMembers());
+            pin.getComments().removeAll(list1);
+            pin.getPinMembers().removeAll(list2);
             maps.getPins().remove(pin);
             pin.setMaps(null);
             mapRepository.save(maps);

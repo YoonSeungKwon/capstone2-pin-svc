@@ -9,6 +9,8 @@ public class PinResponse {
 
     private long pinIdx;
 
+    private String place;
+
     private String header;
 
     private String title;
