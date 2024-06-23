@@ -7,16 +7,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import yoon.capstone2.svc.pinService.dto.request.PinRequest;
 import yoon.capstone2.svc.pinService.dto.response.PinDetailResponse;
 import yoon.capstone2.svc.pinService.dto.response.PinResponse;
-import yoon.capstone2.svc.pinService.entity.MapMembers;
-import yoon.capstone2.svc.pinService.entity.Maps;
-import yoon.capstone2.svc.pinService.entity.Members;
-import yoon.capstone2.svc.pinService.entity.Pin;
+import yoon.capstone2.svc.pinService.entity.*;
 import yoon.capstone2.svc.pinService.enums.Category;
 import yoon.capstone2.svc.pinService.enums.ExceptionCode;
 import yoon.capstone2.svc.pinService.enums.Method;
@@ -109,13 +107,11 @@ public class PinService {
             throw new MapException(ExceptionCode.MAP_NOT_FOUND.getMessage(), ExceptionCode.MAP_NOT_FOUND.getStatus());
         }
 
-        MapMembers mapMembers = mapMemberRepository.findMapMembersByMapsAndMembers(currentMap, currentMember);
-
         if(!mapMemberRepository.existsByMapsAndMembers(currentMap, currentMember))      //핀에 권한이 없음
             throw new PinException(ExceptionCode.UNAUTHORIZED_ACCESS.getMessage(), ExceptionCode.UNAUTHORIZED_ACCESS.getStatus());
 
 
-        List<Pin> list = pinRepository.findPinsByMaps(currentMap);
+        List<Pin> list = currentMap.getPins();
         List<PinResponse> result = new ArrayList<>();
 
         for(Pin p : list){
@@ -164,21 +160,22 @@ public class PinService {
         if (!mapMemberRepository.existsByMapsAndMembers(currentMap, currentMember))      //핀에 권한이 없음
             throw new PinException(ExceptionCode.UNAUTHORIZED_ACCESS.getMessage(), ExceptionCode.UNAUTHORIZED_ACCESS.getStatus());
 
-        String url;
-        if (!Objects.requireNonNull(file.getContentType()).startsWith("image"))
+        String url = null;
+        if (file!=null && !Objects.requireNonNull(file.getContentType()).startsWith("image"))
             throw new UtilException(ExceptionCode.NOT_IMAGE_FORMAT.getMessage(), ExceptionCode.NOT_IMAGE_FORMAT.getStatus());
 
         UUID uuid = UUID.randomUUID();
         try {
-            String fileName = uuid + file.getOriginalFilename();
-            String fileUrl = "https://" + bucket + ".s3." + region + ".amazonaws.com/projects/" + currentMap.getMapIdx() + "/" + fileName;
-            ObjectMetadata objectMetadata = new ObjectMetadata();
-            objectMetadata.setContentType(file.getContentType());
-            objectMetadata.setContentLength(file.getSize());
-            System.out.println(file.getContentType());
-            url = fileUrl;
-            amazonS3Client.putObject(bucket + "/projects/" + currentMap.getMapIdx(), fileName, file.getInputStream(), objectMetadata);
-
+            if(file!=null) {
+                String fileName = uuid + file.getOriginalFilename();
+                String fileUrl = "https://" + bucket + ".s3." + region + ".amazonaws.com/projects/" + currentMap.getMapIdx() + "/" + fileName;
+                ObjectMetadata objectMetadata = new ObjectMetadata();
+                objectMetadata.setContentType(file.getContentType());
+                objectMetadata.setContentLength(file.getSize());
+                System.out.println(file.getContentType());
+                url = fileUrl;
+                amazonS3Client.putObject(bucket + "/projects/" + currentMap.getMapIdx(), fileName, file.getInputStream(), objectMetadata);
+            }
             Pin pin = Pin.builder()
                     .maps(currentMap)
                     .members(currentMember)
@@ -193,7 +190,10 @@ public class PinService {
                     .file(url)
                     .build();
 
-            return toResponse(pinRepository.save(pin));
+            currentMap.getPins().add(pin);
+
+            mapRepository.save(currentMap);
+            return toResponse(pin);
 
         } catch (Exception e) {
             throw new UtilException(ExceptionCode.INTERNAL_SERVER_ERROR.getMessage(), ExceptionCode.INTERNAL_SERVER_ERROR.getStatus());
@@ -217,9 +217,9 @@ public class PinService {
             throw new PinException(ExceptionCode.PIN_NOT_FOUND.getMessage(), ExceptionCode.PIN_NOT_FOUND.getStatus()); // 핀이 존재하지 않음
         if(currentMap == null)
             throw new MapException(ExceptionCode.MAP_NOT_FOUND.getMessage(), ExceptionCode.MAP_NOT_FOUND.getStatus());
-        if(pin.getMaps() != currentMap)
+        if(!pin.getMaps().equals(currentMap))
             throw new PinException(ExceptionCode.PIN_NOT_VALID.getMessage(), ExceptionCode.PIN_NOT_VALID.getStatus());
-        if(currentMember != pin.getMembers())       //////// 만약 멤버 모두가 수정 가능하게 하려면 주석처리
+        if(!currentMember.equals(pin.getMembers()))       //////// 만약 멤버 모두가 수정 가능하게 하려면 주석처리
             throw new PinException(ExceptionCode.FORBIDDEN_ACCESS.getMessage(), ExceptionCode.FORBIDDEN_ACCESS.getStatus()); //멤버가 일치하지 않음
         if(!mapMemberRepository.existsByMapsAndMembers(currentMap, currentMember))      //핀에 권한이 없음
             throw new PinException(ExceptionCode.UNAUTHORIZED_ACCESS.getMessage(), ExceptionCode.UNAUTHORIZED_ACCESS.getStatus());
@@ -234,35 +234,37 @@ public class PinService {
             pin.setCategory(Category.fromString(dto.getCategory()));
         if(dto.getMethod() != null && !dto.getMethod().equals(pin.getMethod().getValue()))
             pin.setMethod(Method.fromString(dto.getMethod()));
-        if(dto.getCost() != 0 && dto.getCost() != pin.getCost())
+        if(dto.getCost() != 0 && dto.getCost() != pin.getCost()) {
             pin.setCost(dto.getCost());
+        }
 
-        String url;
+        String url = null;
 
-        if (!Objects.requireNonNull(file.getContentType()).startsWith("image"))
+        if (file!=null && !Objects.requireNonNull(file.getContentType()).startsWith("image"))
             throw new UtilException(ExceptionCode.NOT_IMAGE_FORMAT.getMessage(), ExceptionCode.NOT_IMAGE_FORMAT.getStatus());
 
         UUID uuid = UUID.randomUUID();
 
         try {
-            String fileName = uuid + file.getOriginalFilename();
-            String fileUrl = "https://" + bucket + ".s3." + region + ".amazonaws.com/projects/" + currentMap.getMapIdx() + "/" + fileName;
-            ObjectMetadata objectMetadata = new ObjectMetadata();
-            objectMetadata.setContentType(file.getContentType());
-            objectMetadata.setContentLength(file.getSize());
-            System.out.println(file.getContentType());
-            url = fileUrl;
-            amazonS3Client.putObject(bucket + "/projects/" + currentMap.getMapIdx(), fileName, file.getInputStream(), objectMetadata);
+            if(file!=null) {
+                String fileName = uuid + file.getOriginalFilename();
+                String fileUrl = "https://" + bucket + ".s3." + region + ".amazonaws.com/projects/" + currentMap.getMapIdx() + "/" + fileName;
+                ObjectMetadata objectMetadata = new ObjectMetadata();
+                objectMetadata.setContentType(file.getContentType());
+                objectMetadata.setContentLength(file.getSize());
+                System.out.println(file.getContentType());
+                url = fileUrl;
+                amazonS3Client.putObject(bucket + "/projects/" + currentMap.getMapIdx(), fileName, file.getInputStream(), objectMetadata);
 
-            String prevUrl = pin.getFile();
+                String prevUrl = pin.getFile();
 
-            if (prevUrl != null && !prevUrl.isEmpty()) {
-                String existingFileKey = prevUrl.substring(prevUrl.indexOf(".com/") + 5);
-                amazonS3Client.deleteObject(new DeleteObjectRequest(bucket, existingFileKey));
+                if (prevUrl != null && !prevUrl.isEmpty()) {
+                    String existingFileKey = prevUrl.substring(prevUrl.indexOf(".com/") + 5);
+                    amazonS3Client.deleteObject(new DeleteObjectRequest(bucket, existingFileKey));
+                }
             }
 
             pin.setFile(url);
-
             return toResponse(pinRepository.save(pin));
 
         } catch (Exception e) {
@@ -283,7 +285,7 @@ public class PinService {
 
         if(pin == null)
             throw new PinException(ExceptionCode.PIN_NOT_FOUND.getMessage(), ExceptionCode.PIN_NOT_FOUND.getStatus());  // 핀이 존재하지 않음
-        if(currentMember != pin.getMembers())
+        if(!currentMember.equals(pin.getMembers()))
             throw new PinException(ExceptionCode.FORBIDDEN_ACCESS.getMessage(), ExceptionCode.FORBIDDEN_ACCESS.getStatus()); //멤버가 일치하지 않음
 
         try{
@@ -297,6 +299,14 @@ public class PinService {
             throw new UtilException(ExceptionCode.INTERNAL_SERVER_ERROR.getMessage(), ExceptionCode.INTERNAL_SERVER_ERROR.getStatus());
         }
 
-        pinRepository.delete(pin);
+        Maps maps = pin.getMaps();
+
+        if(maps!=null){
+            List<Comments> list = new ArrayList<>(pin.getComments());
+            pin.getComments().removeAll(list);
+            maps.getPins().remove(pin);
+            pin.setMaps(null);
+            mapRepository.save(maps);
+        }
     }
 }

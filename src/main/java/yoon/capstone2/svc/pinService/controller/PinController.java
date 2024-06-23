@@ -8,9 +8,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import yoon.capstone2.svc.pinService.dto.request.CommentRequest;
 import yoon.capstone2.svc.pinService.dto.request.PinRequest;
+import yoon.capstone2.svc.pinService.dto.response.CommentResponse;
 import yoon.capstone2.svc.pinService.dto.response.PinDetailResponse;
 import yoon.capstone2.svc.pinService.dto.response.PinResponse;
+import yoon.capstone2.svc.pinService.service.CommentService;
 import yoon.capstone2.svc.pinService.service.PinService;
 
 import java.util.List;
@@ -22,6 +25,8 @@ import java.util.List;
 public class PinController {
 
     private final PinService pinService;
+
+    private final CommentService commentService;
 
     //해당 핀 불러오기 GET(/{idx})
     @Operation(summary = "지도에 있는 특정 핀 정보 불러오기")
@@ -47,7 +52,7 @@ public class PinController {
 
     @Operation(summary = "지도에 있는 특정 핀의 자세한 정보 불러오기")
     @GetMapping("/detail/{pinIdx}")
-    public ResponseEntity<?> getPinDetail(@PathVariable long pinIdx){
+    public ResponseEntity<PinDetailResponse> getPinDetail(@PathVariable long pinIdx){
 
         PinDetailResponse result = pinService.getDetail(pinIdx);
 
@@ -57,7 +62,7 @@ public class PinController {
     //핀 만들기      POST()
     @Operation(summary = "지도에 핀 만들기")
     @PostMapping("/{mapIdx}")
-    public ResponseEntity<PinResponse> createPin(@PathVariable long mapIdx, @RequestPart MultipartFile file, @RequestPart PinRequest dto){
+    public ResponseEntity<PinResponse> createPin(@PathVariable long mapIdx, @RequestPart(required = false) MultipartFile file, @RequestPart PinRequest dto){
 
         PinResponse result = pinService.createPin(mapIdx, file, dto);
 
@@ -67,7 +72,7 @@ public class PinController {
     //핀 수정하기    PUT(/{idx})
     @Operation(summary = "지도에 있는 특정 핀 수정하기")
     @PutMapping("/{mapIdx}/{pinIdx}")
-    public ResponseEntity<PinResponse> updatePin(@PathVariable long mapIdx, @PathVariable long pinIdx, @RequestPart MultipartFile file, @RequestPart PinRequest dto){
+    public ResponseEntity<PinResponse> updatePin(@PathVariable long mapIdx, @PathVariable long pinIdx, @RequestPart(required = false) MultipartFile file, @RequestPart PinRequest dto){
 
         PinResponse result = pinService.updatePin(mapIdx, pinIdx, file, dto);
 
@@ -82,6 +87,24 @@ public class PinController {
         pinService.deletePin(pinIdx);
 
         return new ResponseEntity<>(null, HttpStatus.NO_CONTENT);
+    }
+
+    @Operation(summary = "댓글 불러오기")
+    @GetMapping("/{pinIdx}/comments")
+    public ResponseEntity<List<CommentResponse>> getCommentList(@PathVariable long pinIdx){
+
+        List<CommentResponse> result = commentService.getList(pinIdx);
+
+        return new ResponseEntity<>(result, HttpStatus.OK);
+    }
+
+    @Operation(summary = "댓글 쓰기")
+    @PostMapping("/{pinIdx}/post")
+    public ResponseEntity<CommentResponse> createComment(@PathVariable long pinIdx, @RequestBody CommentRequest dto){
+
+        CommentResponse result = commentService.postComment(pinIdx, dto);
+
+        return new ResponseEntity<>(result, HttpStatus.CREATED);
     }
 
 }

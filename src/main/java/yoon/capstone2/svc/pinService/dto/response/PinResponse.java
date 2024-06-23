@@ -19,9 +19,9 @@ public class PinResponse {
 
     private int cost;
 
-    private int lat;
+    private double lat;
 
-    private int lon;
+    private double lon;
 
     private String file;
 }

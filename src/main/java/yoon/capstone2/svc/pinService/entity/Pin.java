@@ -12,6 +12,8 @@ import yoon.capstone2.svc.pinService.enums.Category;
 import yoon.capstone2.svc.pinService.enums.Method;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Data
@@ -28,7 +30,10 @@ public class Pin {
     @JoinColumn(name = "pin_map")
     private Maps maps;
 
-    @ManyToOne
+    @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "pin")
+    private List<Comments> comments = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pin_member")
     private Members members;
 
@@ -56,16 +61,16 @@ public class Pin {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-    private int latitude;
+    private double latitude;
 
-    private int longitude;
+    private double longitude;
 
     private String file;
 
 
 
     @Builder
-    public Pin(Maps maps, Members members, String header, String title, String memo, Category category, Method method, int cost, int lat, int lon, String file){
+    public Pin(Maps maps, Members members, String header, String title, String memo, Category category, Method method, int cost, double lat, double lon, String file){
         this.maps = maps;
         this.members = members;
         this.header = header;
