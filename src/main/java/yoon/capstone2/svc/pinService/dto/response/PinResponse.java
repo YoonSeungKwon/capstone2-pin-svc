@@ -9,6 +9,8 @@ public class PinResponse {
 
     private long pinIdx;
 
+    private int day;
+
     private String place;
 
     private String header;
@@ -26,4 +28,6 @@ public class PinResponse {
     private double lon;
 
     private String file;
+
+    private String createdAt;
 }

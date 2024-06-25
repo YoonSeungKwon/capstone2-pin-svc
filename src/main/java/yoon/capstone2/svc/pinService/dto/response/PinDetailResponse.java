@@ -12,6 +12,8 @@ public class PinDetailResponse {
 
     private long pinIdx;
 
+    private int day;
+
     private String place;
 
     private String writer;

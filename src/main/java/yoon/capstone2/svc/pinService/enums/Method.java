@@ -8,20 +8,21 @@ public enum Method {
     CREDIT_CARD("신용카드"),
     DEBIT_CARD("체크카드"),
     BANK_TRANSFER("계좌이체"),
-    CASH("현금");
+    CASH("현금"),
+    ETC("기타");
 
-    private final String value;
+    private final String method;
 
-    Method(String value){
-        this.value = value;
+    Method(String method){
+        this.method = method;
     }
 
     public static Method fromString(String method) {
         for (Method m : Method.values()) {
-            if (m.value.equalsIgnoreCase(method)) {
+            if (m.method.equalsIgnoreCase(method)) {
                 return m;
             }
         }
-        return CASH;
+        return ETC;
     }
 }

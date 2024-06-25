@@ -48,6 +48,15 @@ public class PinController {
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
 
+    @Operation(summary = "지도 해당 날짜의 핀 정보 불러오기")
+    @GetMapping("/list/{mapIdx}/{day}")
+    public ResponseEntity<List<PinResponse>> getDatePinList(@PathVariable long mapIdx, @PathVariable int day){
+
+        List<PinResponse> result = pinService.getDatePin(mapIdx, day);
+
+        return new ResponseEntity<>(result, HttpStatus.OK);
+    }
+
     //핀 자세히 보기  GET(/detail/{idx})
 
     @Operation(summary = "지도에 있는 특정 핀의 자세한 정보 불러오기")

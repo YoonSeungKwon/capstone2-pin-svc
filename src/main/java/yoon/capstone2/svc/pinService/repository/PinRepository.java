@@ -15,4 +15,6 @@ public interface PinRepository extends JpaRepository<Pin, Long> {
 
     List<Pin> findPinsByMaps(Maps maps);
 
+    List<Pin> findPinsByDay(int day);
+
 }

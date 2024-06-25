@@ -61,6 +61,9 @@ public class Pin {
     @Column(nullable = false)
     private int cost;
 
+    @Column(nullable = false)
+    private int day;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 
@@ -76,7 +79,7 @@ public class Pin {
 
 
     @Builder
-    public Pin(Maps maps, Members members, String place, String header, String title, String memo, Category category, Method method, int cost, double lat, double lon, String file){
+    public Pin(Maps maps, Members members, String place, String header, String title, String memo, Category category, Method method, int cost, int day, double lat, double lon, String file){
         this.maps = maps;
         this.members = members;
         this.place = place;
@@ -86,6 +89,7 @@ public class Pin {
         this.category = category;
         this.method = method;
         this.cost = cost;
+        this.day = day;
         this.latitude = lat;
         this.longitude = lon;
         this.file = file;

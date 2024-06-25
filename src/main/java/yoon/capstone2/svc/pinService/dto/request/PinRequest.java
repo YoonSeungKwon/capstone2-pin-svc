@@ -21,6 +21,8 @@ public class PinRequest {
 
     private int cost;
 
+    private int day;
+
     private double lat;
 
     private double lon;

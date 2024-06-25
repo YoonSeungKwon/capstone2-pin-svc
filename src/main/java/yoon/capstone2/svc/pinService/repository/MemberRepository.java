@@ -4,10 +4,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import yoon.capstone2.svc.pinService.entity.Members;
 
+import java.util.List;
+
 @Repository
 public interface MemberRepository extends JpaRepository<Members, Long> {
 
     Members findMembersByMemberIdx(long idx);
+
+    List<Members> findMembersByMemberIdxIn(List<Integer> idx);
 
     Members findMembersByEmail(String email);
 

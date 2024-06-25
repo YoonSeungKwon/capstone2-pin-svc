@@ -51,8 +51,8 @@ public class PinService {
 
     //toResponse
     private PinResponse toResponse(Pin pin){
-        return new PinResponse(pin.getPinIdx(), pin.getPlace(), pin.getHeader(), pin.getTitle(), pin.getMemo(), pin.getCategory().getCategory()
-                , pin.getCost(), pin.getLatitude(), pin.getLongitude(), pin.getFile());
+        return new PinResponse(pin.getPinIdx(), pin.getDay(), pin.getPlace(), pin.getHeader(), pin.getTitle(), pin.getMemo(), pin.getCategory().getCategory()
+                , pin.getCost(), pin.getLatitude(), pin.getLongitude(), pin.getFile(), String.valueOf(pin.getCreatedAt()));
     }
 
     //toDetail
@@ -63,8 +63,8 @@ public class PinService {
             list.add(toMemberResponse(pinMembers.getMembers()));
         }
 
-        return new PinDetailResponse(pin.getPinIdx(), pin.getMembers().getUsername(), pin.getPlace(), pin.getHeader(), pin.getTitle(), pin.getMemo(),
-                pin.getCategory().getCategory(), pin.getMethod().getValue(), pin.getCost(), pin.getCreatedAt(), pin.getUpdatedAt(), pin.getFile(), list);
+        return new PinDetailResponse(pin.getPinIdx(), pin.getDay(), pin.getPlace(), pin.getMembers().getUsername(), pin.getHeader(), pin.getTitle(), pin.getMemo(),
+                pin.getCategory().getCategory(), pin.getMethod().getMethod(), pin.getCost(), pin.getCreatedAt(), pin.getUpdatedAt(), pin.getFile(), list);
     }
 
     private MemberResponse toMemberResponse(Members members){
@@ -129,6 +129,37 @@ public class PinService {
         List<PinResponse> result = new ArrayList<>();
 
         for(Pin p : list){
+            result.add(toResponse(p));
+        }
+
+        return result;
+    }
+
+    //해당 날짜의 핀 불러오기
+    @Transactional(readOnly = true)
+    public List<PinResponse> getDatePin(long mapIndex, int day){
+        //해당 지도의 멤버인지 확인하는 절차 필요
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || authentication instanceof AnonymousAuthenticationToken) {
+            throw new UnAuthorizedException(ExceptionCode.UNAUTHORIZED_ACCESS.getMessage(), ExceptionCode.UNAUTHORIZED_ACCESS.getStatus()); //로그인 되지 않았거나 만료됨
+        }
+
+        Members currentMember = (Members) authentication.getPrincipal();
+        Maps currentMap = mapRepository.findMapsByMapIdx(mapIndex);
+
+        if(currentMap == null){
+            throw new MapException(ExceptionCode.MAP_NOT_FOUND.getMessage(), ExceptionCode.MAP_NOT_FOUND.getStatus());
+        }
+
+        if(!mapMemberRepository.existsByMapsAndMembers(currentMap, currentMember))      //핀에 권한이 없음
+            throw new PinException(ExceptionCode.UNAUTHORIZED_ACCESS.getMessage(), ExceptionCode.UNAUTHORIZED_ACCESS.getStatus());
+
+
+        List<Pin> list = pinRepository.findPinsByDay(day);
+        List<PinResponse> result = new ArrayList<>();
+
+        for(Pin p:list){
             result.add(toResponse(p));
         }
 
@@ -200,6 +231,7 @@ public class PinService {
                     .method(Method.fromString(dto.getMethod()))
                     .memo(dto.getMemo())
                     .cost(dto.getCost())
+                    .day(dto.getDay())
                     .lat(dto.getLat())
                     .lon(dto.getLon())
                     .file(url)
@@ -207,18 +239,20 @@ public class PinService {
 
             currentMap.getPins().add(pin);
 
+            if(!currentMap.isPrivate()) {
+                List<PinMembers> pinMembers = pin.getPinMembers();
+                List<Members> memberList = memberRepository.findMembersByMemberIdxIn(dto.getList());
+
+
+                for (Members m : memberList) {
+                    if (m == null) continue;
+                    PinMembers tempPinMember = PinMembers.builder().pin(pin).members(m).build();
+                    pinMembers.add(tempPinMember);
+                }
+            }
             mapRepository.save(currentMap);
 
-            List<PinMembers> pinMembers = pin.getPinMembers();
-
-            for(int i:dto.getList()){
-                Members members = memberRepository.findMembersByMemberIdx(i);
-                if(members==null && !mapMemberRepository.existsByMapsAndMembers(currentMap, members)) continue;
-                PinMembers tempPinMember = PinMembers.builder().pin(pin).members(members).build();
-                pinMembers.add(tempPinMember);
-            }
-
-            return toResponse(pinRepository.save(pin));
+            return toResponse(pin);
 
         } catch (Exception e) {
             throw new UtilException(ExceptionCode.INTERNAL_SERVER_ERROR.getMessage(), ExceptionCode.INTERNAL_SERVER_ERROR.getStatus());
@@ -257,10 +291,13 @@ public class PinService {
             pin.setMemo(dto.getMemo());
         if(dto.getCategory() != null && !dto.getCategory().equals(pin.getCategory().getCategory()))
             pin.setCategory(Category.fromString(dto.getCategory()));
-        if(dto.getMethod() != null && !dto.getMethod().equals(pin.getMethod().getValue()))
+        if(dto.getMethod() != null && !dto.getMethod().equals(pin.getMethod().getMethod()))
             pin.setMethod(Method.fromString(dto.getMethod()));
         if(dto.getCost() != 0 && dto.getCost() != pin.getCost()) {
             pin.setCost(dto.getCost());
+        }
+        if(dto.getDay() != 0 && dto.getDay() != pin.getDay()) {
+            pin.setDay(dto.getDay());
         }
 
         String url = null;

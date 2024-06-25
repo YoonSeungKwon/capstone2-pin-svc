@@ -17,6 +17,22 @@ public enum Category {
 
     PRESENT("선물"),
 
+    CULTURE("문화생황"),
+
+    ACCOMMODATIONS("숙소"),
+
+    MART("마트"),
+
+    FLOWER("꽃"),
+
+    MEDICINE("의료"),
+
+    TIP("팁"),
+
+    BEAUTY("미용"),
+
+    TRANSPORT("교통"),
+
     OTHERS("기타");
 
     private final String category;
